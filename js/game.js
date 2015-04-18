@@ -102,17 +102,20 @@ function create() {
 
     var enter = game.input.keyboard.addKey(Phaser.Keyboard.ENTER);
     enter.onDown.add(enterWord, this);
+
+    var backspace = game.input.keyboard.addKey(Phaser.Keyboard.BACKSPACE);
+    backspace.onDown.add(deleteLetter, this);
     //////////////////////////
 }
 
 var words;
-var word = "";
-var score = 0;
+var letters = [];
+//var score = 0;
 var currentFirstLetter = 'H';
 
 // Mudanças drásticas:
 // - Estilo scrabble, o jogador ganha algumas letras e tem que formar palavras (difícil de implementar a seleção das letras)
-// - (*** Curti!) Energia para usar as letras (ganha-se energia acertando inimigos, então gastar uma palavra grande é um desperdício considerável)
+// - (*** Curti!) Energia para usar as letras (ganha-se energia acertando inimigos ou com o tempo, então gastar uma palavra grande é um desperdício considerável)
 
 // Idéias para desafios:
 // - Acertar palavra com o número dado de letras
@@ -126,10 +129,11 @@ var currentFirstLetter = 'H';
 
 function addLetter(key) {
   var letter = String.fromCharCode(key.keyCode);
-  word += letter;
+  letters.push(letter);
 }
 
 function enterWord() {
+  var word = letters.join('');
   var wordState = words[word];
   console.log(word);
   console.log(wordState);
@@ -146,7 +150,11 @@ function enterWord() {
   } else {
     console.log("Word already used!");
   }
-  word = "";
+  letters = [];
+}
+
+function deleteLetter() {
+  letters.pop();
 }
 
 function update() {
