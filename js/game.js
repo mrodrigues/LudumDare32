@@ -91,7 +91,6 @@ Enemy.prototype.hit = function (letter) {
   if (this.life <= 0) {
     this.kill();
     this.game.score++;
-    console.log(this.game.score);
   }
 };
 
@@ -170,6 +169,8 @@ var PhaserGame = function () {
   this.maxUsedWords = 50;
 
   this.energy = 9999;//20;
+  this.nextEnergyTime = null;
+  this.energyInterval = 5000;
   this.energyLabel = null;
 
   this.nextDifficultyTime = null;
@@ -216,6 +217,7 @@ PhaserGame.prototype = {
 
   create: function () {
     this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
+    this.nextEnergyTime = this.game.time.time + this.energyInterval;
     //  A simple background for our game
     //this.add.sprite(0, 0, 'sky');
 
@@ -294,6 +296,7 @@ PhaserGame.prototype = {
     this.physics.arcade.overlap(this.player, this.enemies, this.hitPlayer, null, this);
     this.spawnEnemy();
     this.increaseDifficulty();
+    this.giveEnergy();
   },
 
   enterWord: function () {
@@ -412,6 +415,7 @@ PhaserGame.prototype = {
     this.enemySpawnTime *= 0.8;
     this.enemies.enemyLife++;
     this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
+
     this.difficultyLabel.visible = true;
     var that = this;
     setTimeout(function() { that.difficultyLabel.visible = false; }, 1000);
@@ -429,6 +433,12 @@ PhaserGame.prototype = {
 
   paintUsedWordsLabels: function () {
     this.usedWordsLabel.clearColors();
+  },
+
+  giveEnergy: function () {
+    if (this.game.time.time < this.nextEnergy) { return; }
+    this.addToEnergy(1);
+    this.nextEnergy = this.game.time.time + this.energyInterval;
   }
 
 }
