@@ -81,7 +81,6 @@ Enemy.prototype.constructor = Enemy;
 
 Enemy.prototype.spawn = function (speed, life) {
   this.reset(WIDTH, this.y);
-  window.enemy = this;
   this.body.maxVelocity.x = speed;
   this.life = life;
 };
@@ -91,6 +90,8 @@ Enemy.prototype.hit = function (letter) {
   this.life--;
   if (this.life <= 0) {
     this.kill();
+    this.game.score++;
+    console.log(this.game.score);
   }
 };
 
@@ -131,13 +132,12 @@ Bonus.EqualLength = function (game) {
 Bonus.EqualLength.prototype.constructor = Bonus.EqualLength;
 
 Bonus.EqualLength.prototype.start = function () {
-  this.length = 2;//Math.round(Math.random() * 6) + 5;
+  this.length = Math.round(Math.random() * 6) + 5;
   this.game.setBonusLabel('' + this.length + ' CHARACTERS');
 };
 
 Bonus.EqualLength.prototype.check = function (word) {
   if (word.length == this.length) {
-    console.log("VICTORY!!!");
     this.game.clearUsedWords();
   }
 };
@@ -162,14 +162,14 @@ var PhaserGame = function () {
   this.wordSpawn = null;
   this.letters = [];
   this.currentFirstLetter = null;
-  this.currentWordText = null;
+  this.currentWordLabel = null;
   this.freeToFire = true;
 
   this.usedWords = [];
-  this.usedWordsLabels = [];
-  this.maxUsedWords = 20;
+  this.usedWordsLabel = [];
+  this.maxUsedWords = 50;
 
-  this.energy = 20;
+  this.energy = 9999;//20;
   this.energyLabel = null;
 
   this.nextDifficultyTime = null;
@@ -179,7 +179,7 @@ var PhaserGame = function () {
   this.currentBonus = null;
   this.bonuses = [];
   this.bonusLabel = null;
-  this.chanceOfBonus = 0.2;
+  this.chanceOfBonus = 0.3;
 }
 
 PhaserGame.prototype = {
@@ -208,12 +208,10 @@ PhaserGame.prototype = {
     this.load.image('star', 'assets/star.png');
     this.load.spritesheet('dude', 'assets/dude.png', 32, 48);
 
-    //////////////////////////
     // Idéias para compactar o arquivo:
     // - enviar apenas uma string, com as palavras separadas por vírgula, e montar a estrutura aqui
     // - gzip
     game.load.json("words", "/data/words.json")
-    //////////////////////////
    },
 
   create: function () {
@@ -251,8 +249,8 @@ PhaserGame.prototype = {
     this.player.animations.add('left', [0, 1, 2, 3], 10, true);
     this.player.animations.add('right', [5, 6, 7, 8], 10, true);
 
-    this.currentWordText = game.add.text(WIDTH / 2, 16, '', { fontSize: '32px', fill: '#fff' });
-    this.currentWordText.anchor.x = 0.5;
+    this.currentWordLabel = game.add.text(WIDTH / 2, 16, '', { fontSize: '32px', fill: '#fff' });
+    this.currentWordLabel.anchor.x = 0.5;
 
     this.words = game.cache.getJSON('words');
 
@@ -270,10 +268,9 @@ PhaserGame.prototype = {
     this.enemies = new Enemies(this);
     this.wordSpawn = new Word(this);
 
-    for (var i = 0; i < this.maxUsedWords; i++) {
-      var label = this.add.text(8, 20 * i, ''+ i, { font: "18px Arial", fill: "#ffffff" });
-      this.usedWordsLabels.push(label);
-    }
+    this.usedWordsLabel = this.add.text(8, 20, '', { font: "18px Arial", fill: "#ffffff" });
+    this.usedWordsLabel.wordWrap = true;
+    this.usedWordsLabel.wordWrapWidth = 200;
 
     this.energyLabel = this.add.text(WIDTH - 50, 16, '', { font: "18px Arial", fill: "#ffffff" });
     this.addToEnergy(0);
@@ -302,22 +299,23 @@ PhaserGame.prototype = {
   enterWord: function () {
     if (!this.freeToFire) { return; }
     var word = this.word();
-    var wordState = this.words[word];
-    console.log(word);
+    var wordExists = this.words[word];
+    var wordAlreadyUsed = this.usedWords.indexOf(word) > -1;
 
     var returnEnergy = true;
-    if (wordState == undefined) {
+    this.paintUsedWordsLabels();
+    if (!wordExists) {
+      // TODO: sound
       console.log("Word doesn't exist!");
-    } else if (!wordState) {
+    } else if (wordAlreadyUsed) {
+      // TODO: sound
+      this.setUsedWordLabelColor(word, '#f00');
+    } else {
       this.words[word] = true;
-      this.score += word.length;
-      console.log("Score: "+ this.score);
       this.wordSpawn.fire(this.player, word);
       this.addUsedWord(word);
       this.currentBonus.check(word);
       returnEnergy = false;
-    } else {
-      console.log("Word already used!");
     }
     if (returnEnergy) {
       this.addToEnergy(this.letters.length);
@@ -333,8 +331,6 @@ PhaserGame.prototype = {
 
     if (Math.random() < this.chanceOfBonus) {
       var i = Math.floor(Math.random() * this.bonuses.length);
-      console.log(this);
-      console.log(i);
       this.currentBonus = this.bonuses[i];
       this.currentBonus.start();
       this.bonusLabel.visible = true;
@@ -361,7 +357,7 @@ PhaserGame.prototype = {
   },
 
   displayWord: function () {
-    this.currentWordText.text = this.word();
+    this.currentWordLabel.text = this.word();
   },
 
   word: function () {
@@ -403,13 +399,7 @@ PhaserGame.prototype = {
   },
 
   displayUsedWords: function () {
-    for (var i = 0; i < this.maxUsedWords; i++) {
-      if (i < this.usedWords.length) {
-        this.usedWordsLabels[i].text = this.usedWords[i];
-      } else {
-        this.usedWordsLabels[i].text = '';
-      }
-    }
+    this.usedWordsLabel.text = this.usedWords.join(', ');
   },
 
   addToEnergy: function (value) {
@@ -429,6 +419,16 @@ PhaserGame.prototype = {
 
   setBonusLabel: function (label) {
     this.bonusLabel.text = label;
+  },
+
+  setUsedWordLabelColor: function (word, color) {
+    var index = this.usedWordsLabel.text.indexOf(word);
+    this.usedWordsLabel.addColor(color, index);
+    this.usedWordsLabel.addColor('#fff', index + word.length);
+  },
+
+  paintUsedWordsLabels: function () {
+    this.usedWordsLabel.clearColors();
   }
 
 }
