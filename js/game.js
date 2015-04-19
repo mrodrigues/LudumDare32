@@ -60,9 +60,10 @@ Word.prototype.fire = function (source, word) {
   setTimeout(fireLetter, 0, word.length - 1);
 };
 
-var Enemy = function (game) {
-  Phaser.Sprite.call(this, game, 0, 0, 'star');
+var Enemy = function (game, spriteKey) {
+  Phaser.Sprite.call(this, game, 0, 0, spriteKey);
   this.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
+  this.scale.x = -1;
   this.anchor.set(0.5);
   this.exists = false;
   this.life = null;
@@ -103,15 +104,15 @@ Enemy.prototype.update = function () {
   }
 };
 
-Enemies = function (game) {
+Enemies = function (game, spriteKey, enemyLife, enemySpeed) {
   Phaser.Group.call(this, game, game.world, 'Enemies', false, true, Phaser.Physics.ARCADE);
 
-  this.enemySpeed = 100;
-  this.enemyLife = 2;
+  this.enemySpeed = enemySpeed;
+  this.enemyLife = enemyLife;
 
   for (var i = 0; i < 64; i++)
   {
-    this.add(new Enemy(game), true);
+    this.add(new Enemy(game, spriteKey), true);
   }
 
   return this;
@@ -155,7 +156,8 @@ var PhaserGame = function () {
   this.scoreText = null;
 
   this.wordWeapon = null;
-  this.enemies = null;
+  this.weakEnemies = null;
+  this.strongEnemies = null;
   this.nextEnemySpawn = 0;
   this.enemySpawnTime = 10000;
 
@@ -178,6 +180,7 @@ var PhaserGame = function () {
   this.nextDifficultyTime = null;
   this.difficultyInterval = 20000;
   this.difficultyLabel = null;
+  this.chanceOfWeakEnemy = 1.0;
 
   this.currentBonus = null;
   this.bonuses = [];
@@ -208,8 +211,9 @@ PhaserGame.prototype = {
   preload: function () {
     //this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
-    this.load.image('star', 'assets/star.png');
-    this.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+    this.load.image('bandit-1', 'assets/bandit-1.png');
+    this.load.image('bandit-2', 'assets/bandit-2.png');
+    this.load.spritesheet('player', 'assets/attorney.png', 40, 40);
 
     // Idéias para compactar o arquivo:
     // - enviar apenas uma string, com as palavras separadas por vírgula, e montar a estrutura aqui
@@ -239,7 +243,8 @@ PhaserGame.prototype = {
     ground.body.immovable = true;
 
     // The player and its settings
-    this.player = this.add.sprite(180, game.world.height - SPAWN_Y_OFFSET, 'dude');
+    this.player = this.add.sprite(180, game.world.height - SPAWN_Y_OFFSET, 'player');
+    window.player = this.player;
 
     //  We need to enable physics on the player
     this.physics.arcade.enable(this.player);
@@ -250,8 +255,9 @@ PhaserGame.prototype = {
     this.player.body.collideWorldBounds = true;
 
     //  Our two animations, walking left and right.
-    this.player.animations.add('left', [0, 1, 2, 3], 10, true);
-    this.player.animations.add('right', [5, 6, 7, 8], 10, true);
+    this.player.animations.add('standing', [0], 1, false);
+    this.player.animations.add('speaking', [0, 1, 2, 1], 5, true);
+    this.player.animations.play('standing');
 
     this.currentWordLabel = game.add.text(WIDTH / 2, 16, '', { font: '32px ' + FONT, fill: '#fff' });
     this.currentWordLabel.anchor.x = 0.5;
@@ -269,7 +275,9 @@ PhaserGame.prototype = {
     var backspace = game.input.keyboard.addKey(Phaser.Keyboard.BACKSPACE);
     backspace.onDown.add(this.deleteLetter, this);
 
-    this.enemies = new Enemies(this);
+    this.weakEnemies = new Enemies(this, 'bandit-1', 2, 100);
+    this.strongEnemies = new Enemies(this, 'bandit-2', 3, 120);
+
     this.wordSpawn = new Word(this);
 
     this.usedWordsLabel = this.add.text(8, 20, '', { font: 'bold 18px ' + FONT, fill: "#ffffff", wordWrap: true, wordWrapWidth: 250 });
@@ -292,8 +300,10 @@ PhaserGame.prototype = {
 
   update: function () {
     this.game.physics.arcade.collide(this.player, this.platforms);
-    this.physics.arcade.overlap(this.wordSpawn, this.enemies, this.hitEnemy, null, this);
-    this.physics.arcade.overlap(this.player, this.enemies, this.hitPlayer, null, this);
+    this.physics.arcade.overlap(this.wordSpawn, this.weakEnemies, this.hitEnemy, null, this);
+    this.physics.arcade.overlap(this.player, this.weakEnemies, this.hitPlayer, null, this);
+    this.physics.arcade.overlap(this.wordSpawn, this.strongEnemies, this.hitEnemy, null, this);
+    this.physics.arcade.overlap(this.player, this.strongEnemies, this.hitPlayer, null, this);
     this.spawnEnemy();
     this.increaseDifficulty();
     this.giveEnergy();
@@ -318,6 +328,7 @@ PhaserGame.prototype = {
       this.wordSpawn.fire(this.player, word);
       this.addUsedWord(word);
       this.currentBonus.check(word);
+      this.player.animations.play("speaking");
       returnEnergy = false;
     }
     if (returnEnergy) {
@@ -339,6 +350,7 @@ PhaserGame.prototype = {
       this.bonusLabel.visible = true;
     } else {
       this.currentBonus = new Bonus.NullBonus();
+      this.bonusLabel.visible = false;
     }
   },
 
@@ -375,7 +387,11 @@ PhaserGame.prototype = {
 
   spawnEnemy: function () {
     if (this.game.time.time < this.nextEnemySpawn) { return; }
-    this.enemies.spawn();
+    if (Math.random() < this.chanceOfWeakEnemy) {
+      this.weakEnemies.spawn();
+    } else {
+      this.strongEnemies.spawn();
+    }
     var timeUntilNextSpawn = 1000 + Math.random() * this.enemySpawnTime;
     this.nextEnemySpawn = this.game.time.time + timeUntilNextSpawn;
   },
@@ -386,6 +402,10 @@ PhaserGame.prototype = {
 
   setFreeToFire: function (value) {
     this.freeToFire = value;
+    var that = this;
+    player.animations.currentAnim.onLoop.addOnce(function() {
+      that.player.animations.play("standing");
+    });
   },
 
   addUsedWord: function (word) {
@@ -412,8 +432,8 @@ PhaserGame.prototype = {
 
   increaseDifficulty: function () {
     if (this.game.time.time < this.nextDifficultyTime) { return; }
-    this.enemySpawnTime *= 0.8;
-    this.enemies.enemyLife++;
+    this.enemySpawnTime *= 0.9;
+    this.chanceOfWeakEnemy *= 0.9;
     this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
 
     this.difficultyLabel.visible = true;
