@@ -3,6 +3,8 @@ var HEIGHT = 400;
 var game = new Phaser.Game(WIDTH, HEIGHT, Phaser.AUTO, 'game');
 var SPAWN_Y_OFFSET = 150;
 
+var FONT = '"Courier New", Courier, monospace';
+
 var alphabet = [];
 for (var keyCode = Phaser.Keyboard.A; keyCode <= Phaser.Keyboard.Z; keyCode++) {
   alphabet.push(String.fromCharCode(keyCode));
@@ -251,7 +253,7 @@ PhaserGame.prototype = {
     this.player.animations.add('left', [0, 1, 2, 3], 10, true);
     this.player.animations.add('right', [5, 6, 7, 8], 10, true);
 
-    this.currentWordLabel = game.add.text(WIDTH / 2, 16, '', { fontSize: '32px', fill: '#fff' });
+    this.currentWordLabel = game.add.text(WIDTH / 2, 16, '', { font: '32px ' + FONT, fill: '#fff' });
     this.currentWordLabel.anchor.x = 0.5;
 
     this.words = game.cache.getJSON('words');
@@ -270,18 +272,16 @@ PhaserGame.prototype = {
     this.enemies = new Enemies(this);
     this.wordSpawn = new Word(this);
 
-    this.usedWordsLabel = this.add.text(8, 20, '', { font: "18px Arial", fill: "#ffffff" });
-    this.usedWordsLabel.wordWrap = true;
-    this.usedWordsLabel.wordWrapWidth = 200;
+    this.usedWordsLabel = this.add.text(8, 20, '', { font: 'bold 18px ' + FONT, fill: "#ffffff", wordWrap: true, wordWrapWidth: 250 });
 
-    this.energyLabel = this.add.text(WIDTH - 50, 16, '', { font: "18px Arial", fill: "#ffffff" });
+    this.energyLabel = this.add.text(WIDTH - 50, 16, '', { font: '18px ' + FONT, fill: "#ffffff" });
     this.addToEnergy(0);
 
-    this.difficultyLabel = this.add.text(WIDTH / 2, 80, 'DIFFICULTY INCREASED', { font: "18px Arial", fill: "#ffffff" });
+    this.difficultyLabel = this.add.text(WIDTH / 2, 80, 'DIFFICULTY INCREASED', { font: '18px ' + FONT, fill: "#ffffff" });
     this.difficultyLabel.anchor.x = 0.5;
     this.difficultyLabel.visible = false;
 
-    this.bonusLabel = this.add.text(WIDTH / 2, 200, '', { font: "18px Arial", fill: "#ffffff" });
+    this.bonusLabel = this.add.text(WIDTH / 2, 200, '', { font: '18px ' + FONT, fill: "#ffffff" });
     this.bonusLabel.anchor.x = 0.5;
     this.bonusLabel.visible = false;
 
