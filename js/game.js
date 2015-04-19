@@ -11,7 +11,7 @@ for (var keyCode = Phaser.Keyboard.A; keyCode <= Phaser.Keyboard.Z; keyCode++) {
 }
 
 var Letter = function (game) {
-  Phaser.Text.call(this, game, 0, 0, '', {fill: "#ffffff"});
+  Phaser.Text.call(this, game, 0, 0, '', {fill: "#ffffff", font: '32px ' + FONT});
   this.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
   this.anchor.set(0.5);
   this.checkWorldBounds = true;
