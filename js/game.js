@@ -152,8 +152,7 @@ var PhaserGame = function () {
   this.player = null;
   this.platforms = null;
 
-  this.score = 0;
-  this.scoreText = null;
+  this.score = null;
 
   this.wordWeapon = null;
   this.weakEnemies = null;
@@ -204,8 +203,9 @@ PhaserGame.prototype = {
   // - Energia?
 
   init: function () {
-    this.game.renderer.renderSession.roundPixels = true;
+    //this.game.renderer.renderSession.roundPixels = true;
     this.physics.startSystem(Phaser.Physics.ARCADE);
+    this.score = 0;
   },
 
   preload: function () {
@@ -259,7 +259,7 @@ PhaserGame.prototype = {
     this.player.animations.add('speaking', [0, 1, 2, 1], 5, true);
     this.player.animations.play('standing');
 
-    this.currentWordLabel = game.add.text(WIDTH / 2, 16, '', { font: '32px ' + FONT, fill: '#fff' });
+    this.currentWordLabel = this.game.add.text(WIDTH / 2, 16, '', { font: '32px ' + FONT, fill: '#fff' });
     this.currentWordLabel.anchor.x = 0.5;
 
     this.words = game.cache.getJSON('words');
@@ -397,7 +397,7 @@ PhaserGame.prototype = {
   },
 
   hitPlayer: function (player, enemy) {
-    // TODO: Game over!
+    this.game.state.start('GameOver');
   },
 
   setFreeToFire: function (value) {
@@ -460,7 +460,23 @@ PhaserGame.prototype = {
     this.addToEnergy(1);
     this.nextEnergy = this.game.time.time + this.energyInterval;
   }
-
 }
 
+var GameOver = function () { };
+GameOver.prototype = {
+  create: function () {
+    var gameOverText = this.game.add.text(WIDTH / 2, 32, 'GAME OVER', { font: '32px ' + FONT, fill: '#fff' });
+    gameOverText.anchor.set(0.5);
+
+    var scoreText = this.game.add.text(WIDTH / 2, HEIGHT / 2, 'SCORE: ' + this.game.state.states.Game.score, { font: '32px ' + FONT, fill: '#fff' });
+    scoreText.anchor.set(0.5);
+
+    this.game.input.keyboard.onDownCallback = function () {
+      this.game.state.start('Game');
+      this.game.input.keyboard.onDownCallback = null;
+    };
+  }
+};
+
 game.state.add('Game', PhaserGame, true);
+game.state.add('GameOver', GameOver);
