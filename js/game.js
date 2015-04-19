@@ -209,11 +209,11 @@ PhaserGame.prototype = {
   },
 
   preload: function () {
-    //this.load.image('sky', 'assets/sky.png');
+    this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
     this.load.image('bandit-1', 'assets/bandit-1.png');
     this.load.image('bandit-2', 'assets/bandit-2.png');
-    this.load.spritesheet('player', 'assets/attorney.png', 40, 40);
+    this.load.spritesheet('player', 'assets/attorney.png', 32, 33);
 
     // Idéias para compactar o arquivo:
     // - enviar apenas uma string, com as palavras separadas por vírgula, e montar a estrutura aqui
@@ -225,7 +225,7 @@ PhaserGame.prototype = {
     this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
     this.nextEnergyTime = this.game.time.time + this.energyInterval;
     //  A simple background for our game
-    //this.add.sprite(0, 0, 'sky');
+    this.add.sprite(0, 0, 'sky');
 
     //  The platforms group contains the ground and the 2 ledges we can jump on
     this.platforms = this.game.add.group();
