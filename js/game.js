@@ -83,7 +83,7 @@ Enemy.prototype = Object.create(Phaser.Sprite.prototype);
 Enemy.prototype.constructor = Enemy;
 
 Enemy.prototype.spawn = function (speed, life) {
-  this.reset(WIDTH, this.y);
+  this.reset(WIDTH - 1, this.y);
   this.body.maxVelocity.x = speed;
   this.life = life;
 };
@@ -189,6 +189,8 @@ var PhaserGame = function () {
   this.chanceOfBonus = 0.3;
 
   this.alertLabel = null;
+
+  this.firstCharacter = true;
 }
 
 PhaserGame.prototype = {
@@ -206,11 +208,7 @@ PhaserGame.prototype = {
   // - Vida?
   // - Energia?
 
-  // TODO: play sound and blink energy label when trying to add letter without energy
-  // TODO: blink "REPEATED"
-  // TODO: allow to enter first letter
   // TODO: edit LD description
-  // TODO: slower enemies
 
   init: function () {
     this.physics.startSystem(Phaser.Physics.ARCADE);
@@ -244,7 +242,7 @@ PhaserGame.prototype = {
     this.freeToFire = true;
     this.usedWords = [];
     this.usedWordsLabel = [];
-    this.energy = 20;
+    this.energy = 10;
     this.chanceOfWeakEnemy = 1.0;
 
     //this.game.sound.add('bgMusic', 1, true);
@@ -308,8 +306,8 @@ PhaserGame.prototype = {
     var backspace = game.input.keyboard.addKey(Phaser.Keyboard.BACKSPACE);
     backspace.onDown.add(this.deleteLetter, this);
 
-    this.weakEnemies = new Enemies(this, 'bandit-1', 2, 100);
-    this.strongEnemies = new Enemies(this, 'bandit-2', 3, 120);
+    this.weakEnemies = new Enemies(this, 'bandit-1', 2, 30);
+    this.strongEnemies = new Enemies(this, 'bandit-2', 3, 50);
 
     this.wordSpawn = new Word(this);
 
@@ -360,7 +358,7 @@ PhaserGame.prototype = {
     } else if (wordAlreadyUsed) {
       this.game.sound.play('missWord');
       this.setUsedWordLabelColor(word, '#f00');
-      this.showAlert("Word already used");
+      this.showAlert("Word recently used");
     } else {
       this.game.sound.play('fireWord');
       this.words[word] = true;
@@ -380,6 +378,7 @@ PhaserGame.prototype = {
     var i = Math.floor(Math.random() * alphabet.length);
     this.currentFirstLetter = alphabet[i];
     this.letters = [];
+    this.firstCharacter = true;
     this.displayWord();
 
     if (Math.random() < this.chanceOfBonus) {
@@ -405,6 +404,11 @@ PhaserGame.prototype = {
       return;
     }
     var letter = String.fromCharCode(key.keyCode);
+    if (letter == this.currentFirstLetter && this.firstCharacter) {
+      this.firstCharacter = false;
+      return;
+    }
+    this.firstCharacter = false;
     this.letters.push(letter);
     this.addToEnergy(-1);
     this.displayWord();
