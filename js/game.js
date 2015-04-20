@@ -33,7 +33,6 @@ Letter.prototype.fire = function (letter, x, y, speed) {
 
 var Word = function (game) {
   Phaser.Group.call(this, game, game.world, 'Word', false, true, Phaser.Physics.ARCADE);
-  this.nextFire = 0;
   this.letterSpeed = 200;
   this.fireRate = 300;
   for (var i = 0; i < 100; i++) {
@@ -46,20 +45,20 @@ Word.prototype = Object.create(Phaser.Group.prototype);
 Word.prototype.constructor = Word;
 
 Word.prototype.fire = function (source, word) {
-  if (this.game.time.time < this.nextFire) { return; }
   var x = source.x + 10;
   var y = source.y + source.height / 2;
   var that = this;
-  fireLetter = function (index) {
+  var index = word.length - 1;
+  fireLetter = function () {
     that.getFirstExists(false).fire(word[index], x, y, that.letterSpeed);
-    if (index > 0) {
-      setTimeout(fireLetter, that.fireRate, index - 1);
-    } else {
+    if (index <= 0) {
       that.game.setFreeToFire(true);
     }
+    index--;
   };
   this.game.setFreeToFire(false);
-  setTimeout(fireLetter, 0, word.length - 1);
+  fireLetter();
+  this.game.delayedRunRepeat(this.fireRate, word.length - 1, fireLetter);
 };
 
 var Enemy = function (game, spriteKey) {
@@ -162,7 +161,7 @@ var PhaserGame = function () {
   this.wordWeapon = null;
   this.weakEnemies = null;
   this.strongEnemies = null;
-  this.nextEnemySpawn = null;
+  this.nextEnemySpawnEvent = null;
   this.enemySpawnTime = null;
 
   this.words = null;
@@ -178,11 +177,11 @@ var PhaserGame = function () {
   this.maxUsedWords = 50;
 
   this.energy = null;
-  this.nextEnergyTime = null;
+  this.nextEnergyTimeEvent = null;
   this.energyInterval = 5000;
   this.energyLabel = null;
 
-  this.nextDifficultyTime = null;
+  this.nextDifficultyTimeEvent = null;
   this.difficultyInterval = 20000;
   this.difficultyLabel = null;
   this.chanceOfWeakEnemy = null;
@@ -259,8 +258,12 @@ PhaserGame.prototype = {
     this.game.sound.add('gameOver');
     this.game.sound.add('cantType');
 
-    this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
-    this.nextEnergyTime = this.game.time.time + this.energyInterval;
+    var timer = this.game.time.create();
+    this.nextDifficultyTimeEvent = timer.loop(this.difficultyInterval, this.increaseDifficulty, this);
+    this.nextEnergyTimeEvent = timer.loop(this.energyInterval, this.giveEnergy, this);
+    this.nextEnemySpawnEvent = timer.loop(1000, this.spawnEnemy, this);
+    timer.start();
+
     //  A simple background for our game
     this.add.sprite(0, 0, 'sky');
 
@@ -365,9 +368,6 @@ PhaserGame.prototype = {
     this.physics.arcade.overlap(this.player, this.weakEnemies, this.hitPlayer, null, this);
     this.physics.arcade.overlap(this.wordSpawn, this.strongEnemies, this.hitEnemy, null, this);
     this.physics.arcade.overlap(this.player, this.strongEnemies, this.hitPlayer, null, this);
-    this.spawnEnemy();
-    this.increaseDifficulty();
-    this.giveEnergy();
   },
 
   enterWord: function () {
@@ -391,7 +391,6 @@ PhaserGame.prototype = {
       this.wordSpawn.fire(this.player, word);
       this.addUsedWord(word);
       this.currentBonus.check(word);
-      this.player.animations.play("speaking");
       returnEnergy = false;
     }
     if (returnEnergy) {
@@ -471,14 +470,13 @@ PhaserGame.prototype = {
   },
 
   spawnEnemy: function () {
-    if (this.game.time.time < this.nextEnemySpawn) { return; }
     if (Math.random() < this.chanceOfWeakEnemy) {
       this.weakEnemies.spawn();
     } else {
       this.strongEnemies.spawn();
     }
     var timeUntilNextSpawn = 1000 + Math.random() * this.enemySpawnTime;
-    this.nextEnemySpawn = this.game.time.time + timeUntilNextSpawn;
+    this.nextEnemySpawnEvent.delay = timeUntilNextSpawn;
   },
 
   hitPlayer: function (player, enemy) {
@@ -488,10 +486,14 @@ PhaserGame.prototype = {
 
   setFreeToFire: function (value) {
     this.freeToFire = value;
-    var that = this;
-    this.player.animations.currentAnim.onLoop.addOnce(function() {
-      that.player.animations.play("standing");
-    });
+    if (value) {
+      var that = this;
+      this.player.animations.currentAnim.onLoop.addOnce(function() {
+        that.player.animations.play("standing");
+      });
+    } else {
+      this.player.animations.play("speaking");
+    }
   },
 
   addUsedWord: function (word) {
@@ -517,14 +519,12 @@ PhaserGame.prototype = {
   },
 
   increaseDifficulty: function () {
-    if (this.game.time.time < this.nextDifficultyTime) { return; }
     this.enemySpawnTime *= 0.9;
     this.chanceOfWeakEnemy *= 0.9;
-    this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
 
     this.difficultyLabel.visible = true;
     var that = this;
-    setTimeout(function() { that.difficultyLabel.visible = false; }, 1000);
+    this.delayedRunOnce(1000, function() { that.difficultyLabel.visible = false; });
   },
 
   setBonusLabel: function (label) {
@@ -542,21 +542,19 @@ PhaserGame.prototype = {
   },
 
   giveEnergy: function () {
-    if (this.game.time.time < this.nextEnergy) { return; }
     this.addToEnergy(1);
-    this.nextEnergy = this.game.time.time + this.energyInterval;
   },
 
   showAlert: function (text) {
     this.alertLabel.text = text;
     this.alertLabel.visible = true;
     var that = this;
-    setTimeout(function () { that.alertLabel.visible = false; }, 500);
+    this.delayedRunOnce(500, function () { that.alertLabel.visible = false; });
   },
 
   flashLabel: function (label, originalColor, color) {
     label.fill = color;
-    setTimeout(function () { label.fill = originalColor; }, 500);
+    this.delayedRunOnce(500, function () { label.fill = originalColor; });
   },
 
   increaseScore: function () {
@@ -567,6 +565,19 @@ PhaserGame.prototype = {
   pauseGame: function () {
     this.game.paused = !this.game.paused;
     this.pauseScreen.visible = this.game.paused;
+  },
+
+  delayedRunOnce: function (delay, callback) {
+    var timer = this.game.time.create(true);
+    timer.add(delay, callback);
+    timer.start();
+  },
+
+  delayedRunRepeat: function (delay, repeatCount, callback) {
+    if (repeatCount <= 0) { return; }
+    var timer = this.game.time.create(true);
+    timer.repeat(delay, repeatCount, callback);
+    timer.start();
   }
 }
 
