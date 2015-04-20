@@ -89,6 +89,7 @@ Enemy.prototype.spawn = function (speed, life) {
 };
 
 Enemy.prototype.hit = function (letter) {
+  this.game.sound.play('hit');
   this.body.velocity.x = this.recoil;
   this.life--;
   if (this.life <= 0) {
@@ -171,7 +172,7 @@ var PhaserGame = function () {
   this.usedWordsLabel = [];
   this.maxUsedWords = 50;
 
-  this.energy = 9999;//20;
+  this.energy = 20;
   this.nextEnergyTime = null;
   this.energyInterval = 5000;
   this.energyLabel = null;
@@ -203,7 +204,6 @@ PhaserGame.prototype = {
   // - Energia?
 
   init: function () {
-    //this.game.renderer.renderSession.roundPixels = true;
     this.physics.startSystem(Phaser.Physics.ARCADE);
     this.score = 0;
   },
@@ -211,17 +211,28 @@ PhaserGame.prototype = {
   preload: function () {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
+
     this.load.image('bandit-1', 'assets/bandit-1.png');
     this.load.image('bandit-2', 'assets/bandit-2.png');
     this.load.spritesheet('player', 'assets/attorney.png', 32, 33);
 
+    //this.load.audio('bgMusic', 'assets/Rolemusic_-_Ladybug_Castle.mp3');
+    this.load.audio('hit', 'assets/hit.wav');
+    this.load.audio('missWord', 'assets/missWord.wav');
+    this.load.audio('fireWord', 'assets/fireWord.wav');
+
     // Idéias para compactar o arquivo:
     // - enviar apenas uma string, com as palavras separadas por vírgula, e montar a estrutura aqui
     // - gzip
-    game.load.json("words", "/data/words.json")
    },
 
   create: function () {
+    //this.game.sound.add('bgMusic', 1, true);
+    //this.game.sound.play('bgMusic');
+    this.game.sound.add('hit');
+    this.game.sound.add('missWord');
+    this.game.sound.add('fireWord');
+
     this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
     this.nextEnergyTime = this.game.time.time + this.energyInterval;
     //  A simple background for our game
@@ -262,7 +273,7 @@ PhaserGame.prototype = {
     this.currentWordLabel = this.game.add.text(WIDTH / 2, 16, '', { font: '32px ' + FONT, fill: '#fff' });
     this.currentWordLabel.anchor.x = 0.5;
 
-    this.words = game.cache.getJSON('words');
+    this.words = WORDS;
 
     for (var keyCode = Phaser.Keyboard.A; keyCode <= Phaser.Keyboard.Z; keyCode++) {
       var key = game.input.keyboard.addKey(keyCode);
@@ -318,12 +329,12 @@ PhaserGame.prototype = {
     var returnEnergy = true;
     this.paintUsedWordsLabels();
     if (!wordExists) {
-      // TODO: sound
-      console.log("Word doesn't exist!");
+      this.game.sound.play('missWord');
     } else if (wordAlreadyUsed) {
-      // TODO: sound
+      this.game.sound.play('missWord');
       this.setUsedWordLabelColor(word, '#f00');
     } else {
+      this.game.sound.play('fireWord');
       this.words[word] = true;
       this.wordSpawn.fire(this.player, word);
       this.addUsedWord(word);
