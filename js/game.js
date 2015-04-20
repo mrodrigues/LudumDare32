@@ -566,7 +566,8 @@ PhaserGame.prototype = {
     this.scoreLabel.text = '' + this.score;
   },
 
-  pauseGame: function () {
+  pauseGame: function (key) {
+    key.event.preventDefault();
     this.game.paused = !this.game.paused;
     this.pauseScreen.visible = this.game.paused;
   },
