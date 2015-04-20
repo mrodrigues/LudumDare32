@@ -141,6 +141,7 @@ Bonus.EqualLength.prototype.start = function () {
 
 Bonus.EqualLength.prototype.check = function (word) {
   if (word.length == this.length) {
+    this.game.sound.play('bonus');
     this.game.clearUsedWords();
   }
 };
@@ -186,6 +187,8 @@ var PhaserGame = function () {
   this.bonuses = [];
   this.bonusLabel = null;
   this.chanceOfBonus = 0.3;
+
+  this.alertLabel = null;
 }
 
 PhaserGame.prototype = {
@@ -202,6 +205,12 @@ PhaserGame.prototype = {
   // - Apagar o backlog de palavras usadas (ou apenas as últimas X palavras)
   // - Vida?
   // - Energia?
+
+  // TODO: play sound and blink energy label when trying to add letter without energy
+  // TODO: blink "REPEATED"
+  // TODO: allow to enter first letter
+  // TODO: edit LD description
+  // TODO: slower enemies
 
   init: function () {
     this.physics.startSystem(Phaser.Physics.ARCADE);
@@ -220,6 +229,9 @@ PhaserGame.prototype = {
     this.load.audio('hit', 'assets/hit.wav');
     this.load.audio('missWord', 'assets/missWord.wav');
     this.load.audio('fireWord', 'assets/fireWord.wav');
+    this.load.audio('bonus', 'assets/bonus.wav');
+    this.load.audio('gameOver', 'assets/gameOver.wav');
+    this.load.audio('cantType', 'assets/cantType.wav');
 
     // Idéias para compactar o arquivo:
     // - enviar apenas uma string, com as palavras separadas por vírgula, e montar a estrutura aqui
@@ -240,6 +252,9 @@ PhaserGame.prototype = {
     this.game.sound.add('hit');
     this.game.sound.add('missWord');
     this.game.sound.add('fireWord');
+    this.game.sound.add('bonus');
+    this.game.sound.add('gameOver');
+    this.game.sound.add('cantType');
 
     this.nextDifficultyTime = this.game.time.time + this.difficultyInterval;
     this.nextEnergyTime = this.game.time.time + this.energyInterval;
@@ -313,6 +328,10 @@ PhaserGame.prototype = {
 
     this.bonuses.push(new Bonus.EqualLength(this));
 
+    this.alertLabel = this.add.text(WIDTH / 2, 120, '', { font: '18px ' + FONT, fill: '#f00' });
+    this.alertLabel.anchor.x = 0.5;
+    this.alertLabel.visible = false;
+
     this.nextRound();
   },
 
@@ -337,9 +356,11 @@ PhaserGame.prototype = {
     this.paintUsedWordsLabels();
     if (!wordExists) {
       this.game.sound.play('missWord');
+      this.showAlert("Word doesn't exist");
     } else if (wordAlreadyUsed) {
       this.game.sound.play('missWord');
       this.setUsedWordLabelColor(word, '#f00');
+      this.showAlert("Word already used");
     } else {
       this.game.sound.play('fireWord');
       this.words[word] = true;
@@ -373,8 +394,16 @@ PhaserGame.prototype = {
   },
 
   addLetter: function (key) {
-    if (!this.freeToFire) { return; }
-    if (this.energy <= 0) { return; }
+    if (!this.freeToFire) {
+      this.game.sound.play('cantType');
+      this.showAlert('Wait for the word to stop firing');
+      return;
+    }
+    if (this.energy <= 0) {
+      this.game.sound.play('cantType');
+      this.showAlert('Out of energy');
+      return;
+    }
     var letter = String.fromCharCode(key.keyCode);
     this.letters.push(letter);
     this.addToEnergy(-1);
@@ -415,6 +444,7 @@ PhaserGame.prototype = {
   },
 
   hitPlayer: function (player, enemy) {
+    this.game.sound.play('gameOver');
     this.game.state.start('GameOver');
   },
 
@@ -477,6 +507,13 @@ PhaserGame.prototype = {
     if (this.game.time.time < this.nextEnergy) { return; }
     this.addToEnergy(1);
     this.nextEnergy = this.game.time.time + this.energyInterval;
+  },
+
+  showAlert: function (text) {
+    this.alertLabel.text = text;
+    this.alertLabel.visible = true;
+    var that = this;
+    setTimeout(function () { that.alertLabel.visible = false; }, 500);
   }
 }
 
@@ -486,7 +523,7 @@ GameOver.prototype = {
     var gameOverText = this.game.add.text(WIDTH / 2, 32, 'GAME OVER', { font: '32px ' + FONT, fill: '#fff' });
     gameOverText.anchor.set(0.5);
 
-    var scoreText = this.game.add.text(WIDTH / 2, HEIGHT / 2, 'SCORE: ' + this.game.state.states.Game.score, { font: '32px ' + FONT, fill: '#fff' });
+    var scoreText = this.game.add.text(WIDTH / 2, HEIGHT / 2, 'BANDITS JAILED: ' + this.game.state.states.Game.score, { font: '32px ' + FONT, fill: '#fff' });
     scoreText.anchor.set(0.5);
 
     this.game.input.keyboard.onDownCallback = function () {
