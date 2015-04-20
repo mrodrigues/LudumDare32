@@ -489,7 +489,7 @@ PhaserGame.prototype = {
   },
 
   setFreeToFire: function (value) {
-    this.freeToFire = value;
+    //this.freeToFire = value;
     if (value) {
       var that = this;
       this.player.animations.currentAnim.onLoop.addOnce(function() {
@@ -497,6 +497,7 @@ PhaserGame.prototype = {
       });
     } else {
       this.player.animations.play("speaking");
+      this.player.animations.currentAnim.onLoop.removeAll();
     }
   },
 
