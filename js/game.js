@@ -7,6 +7,8 @@ var FONT = '"Courier New", Courier, monospace';
 var RED = '#f38';
 var WHITE = '#fff';
 
+var PLAYING_MUSIC = true;
+
 var alphabet = [];
 for (var keyCode = Phaser.Keyboard.A; keyCode <= Phaser.Keyboard.Z; keyCode++) {
   alphabet.push(String.fromCharCode(keyCode));
@@ -224,6 +226,7 @@ PhaserGame.prototype = {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
     this.load.image('pause', 'assets/pause.png');
+    this.load.spritesheet('musicButton', 'assets/music.png', 50, 50);
 
     this.load.image('bandit-1', 'assets/bandit-1.png');
     this.load.image('bandit-2', 'assets/bandit-2.png');
@@ -252,7 +255,9 @@ PhaserGame.prototype = {
     this.chanceOfWeakEnemy = 1.0;
 
     this.bgMusic = this.game.sound.add('bgMusic', 1, true);
-    this.bgMusic.play();
+    if (PLAYING_MUSIC) {
+      this.bgMusic.play();
+    }
 
     //this.game.sound.add('hit');
     //this.game.sound.add('missWord');
@@ -358,11 +363,29 @@ PhaserGame.prototype = {
     this.alertLabel.anchor.x = 0.5;
     this.alertLabel.visible = false;
 
-    this.nextRound();
-
     this.pauseScreen = this.add.sprite(0, 0, 'pause');
     this.pauseScreen.alpha = 0.3;
     this.pauseScreen.visible = false;
+
+    var musicButton = this.game.add.sprite(WIDTH - 55, HEIGHT - 55, 'musicButton');
+    musicButton.inputEnabled = true;
+    musicButton.input.useHandCursor = true;
+    musicButton.animations.add('playingMusic', [0], 1);
+    musicButton.animations.add('musicMuted', [1], 1);
+    musicButton.animations.play(PLAYING_MUSIC ? 'playingMusic' : 'musicMuted');
+    var that = this;
+    musicButton.events.onInputDown.add(function(){
+      PLAYING_MUSIC = !PLAYING_MUSIC;
+      if (PLAYING_MUSIC) {
+        musicButton.animations.play('playingMusic');
+        that.bgMusic.play();
+      } else {
+        musicButton.animations.play('musicMuted');
+        that.bgMusic.stop();
+      }
+    });
+
+    this.nextRound();
   },
 
   update: function () {
