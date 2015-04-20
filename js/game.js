@@ -158,21 +158,21 @@ var PhaserGame = function () {
   this.wordWeapon = null;
   this.weakEnemies = null;
   this.strongEnemies = null;
-  this.nextEnemySpawn = 0;
-  this.enemySpawnTime = 10000;
+  this.nextEnemySpawn = null;
+  this.enemySpawnTime = null;
 
   this.words = null;
   this.wordSpawn = null;
-  this.letters = [];
+  this.letters = null;
   this.currentFirstLetter = null;
   this.currentWordLabel = null;
-  this.freeToFire = true;
+  this.freeToFire = null;
 
-  this.usedWords = [];
-  this.usedWordsLabel = [];
+  this.usedWords = null;
+  this.usedWordsLabel = null;
   this.maxUsedWords = 50;
 
-  this.energy = 20;
+  this.energy = null;
   this.nextEnergyTime = null;
   this.energyInterval = 5000;
   this.energyLabel = null;
@@ -180,7 +180,7 @@ var PhaserGame = function () {
   this.nextDifficultyTime = null;
   this.difficultyInterval = 20000;
   this.difficultyLabel = null;
-  this.chanceOfWeakEnemy = 1.0;
+  this.chanceOfWeakEnemy = null;
 
   this.currentBonus = null;
   this.bonuses = [];
@@ -227,6 +227,14 @@ PhaserGame.prototype = {
    },
 
   create: function () {
+    this.enemySpawnTime = 10000;
+    this.letters = [];
+    this.freeToFire = true;
+    this.usedWords = [];
+    this.usedWordsLabel = [];
+    this.energy = 20;
+    this.chanceOfWeakEnemy = 1.0;
+
     //this.game.sound.add('bgMusic', 1, true);
     //this.game.sound.play('bgMusic');
     this.game.sound.add('hit');
@@ -255,7 +263,6 @@ PhaserGame.prototype = {
 
     // The player and its settings
     this.player = this.add.sprite(180, game.world.height - SPAWN_Y_OFFSET, 'player');
-    window.player = this.player;
 
     //  We need to enable physics on the player
     this.physics.arcade.enable(this.player);
@@ -414,7 +421,7 @@ PhaserGame.prototype = {
   setFreeToFire: function (value) {
     this.freeToFire = value;
     var that = this;
-    player.animations.currentAnim.onLoop.addOnce(function() {
+    this.player.animations.currentAnim.onLoop.addOnce(function() {
       that.player.animations.play("standing");
     });
   },
@@ -453,7 +460,7 @@ PhaserGame.prototype = {
   },
 
   setBonusLabel: function (label) {
-    this.bonusLabel.text = label;
+    this.bonusLabel.text = 'BONUS: ' + label;
   },
 
   setUsedWordLabelColor: function (word, color) {
@@ -489,5 +496,41 @@ GameOver.prototype = {
   }
 };
 
-game.state.add('Game', PhaserGame, true);
+var TitleScreen = function () {
+  this.screens = [];
+  this.currentScreen = 0;
+  this.tutorialsNumber = 4;
+};
+TitleScreen.prototype = {
+  preload: function () {
+    this.load.image('title', 'assets/title.png');
+    for (var i = 1; i <= this.tutorialsNumber; i++) {
+      this.load.image('tutorial' + i, 'assets/tutorial' + i + '.png');
+    }
+  },
+
+  create: function () {
+    this.screens.push(this.add.sprite(0, 0, 'title'));
+    for (var i = 1; i <= this.tutorialsNumber; i++) {
+      var tutorial = this.add.sprite(0, 0, 'tutorial' + i);
+      tutorial.visible = false;
+      this.screens.push(tutorial);
+    }
+
+    var that = this;
+    this.game.input.keyboard.onDownCallback = function () {
+      if (that.currentScreen + 1 < that.screens.length) {
+        that.screens[that.currentScreen].visible = false;
+        that.currentScreen++;
+        that.screens[that.currentScreen].visible = true;
+      } else {
+        that.game.state.start('Game');
+        that.game.input.keyboard.onDownCallback = null;
+      }
+    };
+  },
+};
+
+game.state.add('TitleScreen', TitleScreen, true);
+game.state.add('Game', PhaserGame);
 game.state.add('GameOver', GameOver);
