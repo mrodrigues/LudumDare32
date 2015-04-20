@@ -195,6 +195,8 @@ var PhaserGame = function () {
   this.alertLabel = null;
 
   this.firstCharacter = true;
+
+  this.pauseScreen = null;
 }
 
 PhaserGame.prototype = {
@@ -220,6 +222,7 @@ PhaserGame.prototype = {
   preload: function () {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
+    this.load.image('pause', 'assets/pause.png');
 
     this.load.image('bandit-1', 'assets/bandit-1.png');
     this.load.image('bandit-2', 'assets/bandit-2.png');
@@ -314,6 +317,9 @@ PhaserGame.prototype = {
     var esc = game.input.keyboard.addKey(Phaser.Keyboard.ESC);
     esc.onDown.add(this.resetWord, this);
 
+    var spacebar = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+    spacebar.onDown.add(this.pauseGame, this);
+
     this.weakEnemies = new Enemies(this, 'bandit-1', 2, 30);
     this.strongEnemies = new Enemies(this, 'bandit-2', 3, 50);
 
@@ -347,6 +353,10 @@ PhaserGame.prototype = {
     this.alertLabel.visible = false;
 
     this.nextRound();
+
+    this.pauseScreen = this.add.sprite(0, 0, 'pause');
+    this.pauseScreen.alpha = 0.3;
+    this.pauseScreen.visible = false;
   },
 
   update: function () {
@@ -552,6 +562,11 @@ PhaserGame.prototype = {
   increaseScore: function () {
     this.score++;
     this.scoreLabel.text = '' + this.score;
+  },
+
+  pauseGame: function () {
+    this.game.paused = !this.game.paused;
+    this.pauseScreen.visible = this.game.paused;
   }
 }
 
