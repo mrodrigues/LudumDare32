@@ -311,6 +311,9 @@ PhaserGame.prototype = {
     var backspace = game.input.keyboard.addKey(Phaser.Keyboard.BACKSPACE);
     backspace.onDown.add(this.deleteLetter, this);
 
+    var esc = game.input.keyboard.addKey(Phaser.Keyboard.ESC);
+    esc.onDown.add(this.resetWord, this);
+
     this.weakEnemies = new Enemies(this, 'bandit-1', 2, 30);
     this.strongEnemies = new Enemies(this, 'bandit-2', 3, 50);
 
@@ -433,6 +436,12 @@ PhaserGame.prototype = {
       this.addToEnergy(1);
     }
     this.letters.pop();
+    this.displayWord();
+  },
+
+  resetWord: function () {
+    this.addToEnergy(this.letters.length);
+    this.letters = [];
     this.displayWord();
   },
 
