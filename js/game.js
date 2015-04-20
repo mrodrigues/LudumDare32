@@ -196,6 +196,8 @@ var PhaserGame = function () {
   this.firstCharacter = true;
 
   this.pauseScreen = null;
+
+  this.bgMusic = null;
 }
 
 PhaserGame.prototype = {
@@ -227,7 +229,7 @@ PhaserGame.prototype = {
     this.load.image('bandit-2', 'assets/bandit-2.png');
     this.load.spritesheet('player', 'assets/attorney.png', 32, 33);
 
-    //this.load.audio('bgMusic', 'assets/Rolemusic_-_Ladybug_Castle.mp3');
+    this.load.audio('bgMusic', 'assets/bgMusic.wav');
     this.load.audio('hit', 'assets/hit.wav');
     this.load.audio('missWord', 'assets/missWord.wav');
     this.load.audio('fireWord', 'assets/fireWord.wav');
@@ -249,14 +251,15 @@ PhaserGame.prototype = {
     this.energy = 10;
     this.chanceOfWeakEnemy = 1.0;
 
-    //this.game.sound.add('bgMusic', 1, true);
-    //this.game.sound.play('bgMusic');
-    this.game.sound.add('hit');
-    this.game.sound.add('missWord');
-    this.game.sound.add('fireWord');
-    this.game.sound.add('bonus');
-    this.game.sound.add('gameOver');
-    this.game.sound.add('cantType');
+    this.bgMusic = this.game.sound.add('bgMusic', 1, true);
+    this.bgMusic.play();
+
+    //this.game.sound.add('hit');
+    //this.game.sound.add('missWord');
+    //this.game.sound.add('fireWord', 0.1);
+    //this.game.sound.add('bonus');
+    //this.game.sound.add('gameOver');
+    //this.game.sound.add('cantType');
 
     var timer = this.game.time.create();
     this.nextDifficultyTimeEvent = timer.loop(this.difficultyInterval, this.increaseDifficulty, this);
@@ -386,7 +389,7 @@ PhaserGame.prototype = {
       this.setUsedWordLabelColor(word, RED);
       this.showAlert("Word recently used");
     } else {
-      this.game.sound.play('fireWord');
+      this.game.sound.play('fireWord', 0.6);
       this.words[word] = true;
       this.wordSpawn.fire(this.player, word);
       this.addUsedWord(word);
@@ -481,6 +484,7 @@ PhaserGame.prototype = {
 
   hitPlayer: function (player, enemy) {
     this.game.sound.play('gameOver');
+    this.bgMusic.stop();
     this.game.state.start('GameOver');
   },
 
