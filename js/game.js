@@ -4,6 +4,8 @@ var game = new Phaser.Game(WIDTH, HEIGHT, Phaser.AUTO, 'game');
 var SPAWN_Y_OFFSET = 150;
 
 var FONT = '"Courier New", Courier, monospace';
+var RED = '#f38';
+var WHITE = '#fff';
 
 var alphabet = [];
 for (var keyCode = Phaser.Keyboard.A; keyCode <= Phaser.Keyboard.Z; keyCode++) {
@@ -11,7 +13,7 @@ for (var keyCode = Phaser.Keyboard.A; keyCode <= Phaser.Keyboard.Z; keyCode++) {
 }
 
 var Letter = function (game) {
-  Phaser.Text.call(this, game, 0, 0, '', {fill: "#ffffff", font: '32px ' + FONT});
+  Phaser.Text.call(this, game, 0, 0, '', {fill: WHITE, font: '32px ' + FONT});
   this.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
   this.anchor.set(0.5);
   this.checkWorldBounds = true;
@@ -94,7 +96,7 @@ Enemy.prototype.hit = function (letter) {
   this.life--;
   if (this.life <= 0) {
     this.kill();
-    this.game.score++;
+    this.game.increaseScore();
   }
 };
 
@@ -155,6 +157,7 @@ var PhaserGame = function () {
   this.platforms = null;
 
   this.score = null;
+  this.scoreLabel = null;
 
   this.wordWeapon = null;
   this.weakEnemies = null;
@@ -167,6 +170,7 @@ var PhaserGame = function () {
   this.letters = null;
   this.currentFirstLetter = null;
   this.currentWordLabel = null;
+  this.currentWordLengthLabel = null;
   this.freeToFire = null;
 
   this.usedWords = null;
@@ -207,8 +211,6 @@ PhaserGame.prototype = {
   // - Apagar o backlog de palavras usadas (ou apenas as últimas X palavras)
   // - Vida?
   // - Energia?
-
-  // TODO: edit LD description
 
   init: function () {
     this.physics.startSystem(Phaser.Physics.ARCADE);
@@ -290,8 +292,11 @@ PhaserGame.prototype = {
     this.player.animations.add('speaking', [0, 1, 2, 1], 5, true);
     this.player.animations.play('standing');
 
-    this.currentWordLabel = this.game.add.text(WIDTH / 2, 16, '', { font: '32px ' + FONT, fill: '#fff' });
+    this.currentWordLabel = this.game.add.text(WIDTH / 2, 16, '', { font: '32px ' + FONT, fill: WHITE });
     this.currentWordLabel.anchor.x = 0.5;
+
+    this.currentWordLengthLabel = this.game.add.text(WIDTH / 2, 48, '1', { font: '18px ' + FONT, fill: WHITE });
+    this.currentWordLengthLabel.anchor.x = 0.5;
 
     this.words = WORDS;
 
@@ -311,22 +316,30 @@ PhaserGame.prototype = {
 
     this.wordSpawn = new Word(this);
 
-    this.usedWordsLabel = this.add.text(8, 20, '', { font: 'bold 18px ' + FONT, fill: "#ffffff", wordWrap: true, wordWrapWidth: 250 });
+    this.usedWordsLabel = this.add.text(8, 20, '', { font: 'bold 18px ' + FONT, fill: WHITE, wordWrap: true, wordWrapWidth: 250 });
 
-    this.energyLabel = this.add.text(WIDTH - 50, 16, '', { font: '18px ' + FONT, fill: "#ffffff" });
+    var energyTextLabel = this.add.text(WIDTH - 50, 16, 'ENERGY', { font: '18px ' + FONT, fill: WHITE });
+    energyTextLabel.anchor.x = 0.5;
+    this.energyLabel = this.add.text(WIDTH - 50, 40, '', { font: '18px ' + FONT, fill: WHITE });
+    this.energyLabel.anchor.x = 0.5;
     this.addToEnergy(0);
 
-    this.difficultyLabel = this.add.text(WIDTH / 2, 80, 'DIFFICULTY INCREASED', { font: '18px ' + FONT, fill: "#ffffff" });
+    var scoreTextLabel = this.add.text(WIDTH - 50, 76, 'JAILED', { font: '18px ' + FONT, fill: WHITE });
+    scoreTextLabel.anchor.x = 0.5;
+    this.scoreLabel = this.add.text(WIDTH - 50, 100, '0', { font: '18px ' + FONT, fill: WHITE });
+    this.scoreLabel.anchor.x = 0.5;
+
+    this.difficultyLabel = this.add.text(WIDTH / 2, 80, 'DIFFICULTY INCREASED', { font: '18px ' + FONT, fill: WHITE });
     this.difficultyLabel.anchor.x = 0.5;
     this.difficultyLabel.visible = false;
 
-    this.bonusLabel = this.add.text(WIDTH / 2, 200, '', { font: '18px ' + FONT, fill: "#ffffff" });
+    this.bonusLabel = this.add.text(WIDTH / 2, 200, '', { font: '18px ' + FONT, fill: WHITE });
     this.bonusLabel.anchor.x = 0.5;
     this.bonusLabel.visible = false;
 
     this.bonuses.push(new Bonus.EqualLength(this));
 
-    this.alertLabel = this.add.text(WIDTH / 2, 120, '', { font: '18px ' + FONT, fill: '#f00' });
+    this.alertLabel = this.add.text(WIDTH / 2, 120, '', { font: '18px ' + FONT, fill: RED });
     this.alertLabel.anchor.x = 0.5;
     this.alertLabel.visible = false;
 
@@ -357,7 +370,7 @@ PhaserGame.prototype = {
       this.showAlert("Word doesn't exist");
     } else if (wordAlreadyUsed) {
       this.game.sound.play('missWord');
-      this.setUsedWordLabelColor(word, '#f00');
+      this.setUsedWordLabelColor(word, RED);
       this.showAlert("Word recently used");
     } else {
       this.game.sound.play('fireWord');
@@ -401,6 +414,7 @@ PhaserGame.prototype = {
     if (this.energy <= 0) {
       this.game.sound.play('cantType');
       this.showAlert('Out of energy');
+      this.flashLabel(this.energyLabel, WHITE, RED);
       return;
     }
     var letter = String.fromCharCode(key.keyCode);
@@ -424,6 +438,7 @@ PhaserGame.prototype = {
 
   displayWord: function () {
     this.currentWordLabel.text = this.word();
+    this.currentWordLengthLabel.text = '' + this.word().length;
   },
 
   word: function () {
@@ -500,7 +515,7 @@ PhaserGame.prototype = {
   setUsedWordLabelColor: function (word, color) {
     var index = this.usedWordsLabel.text.indexOf(word);
     this.usedWordsLabel.addColor(color, index);
-    this.usedWordsLabel.addColor('#fff', index + word.length);
+    this.usedWordsLabel.addColor(WHITE, index + word.length);
   },
 
   paintUsedWordsLabels: function () {
@@ -518,16 +533,26 @@ PhaserGame.prototype = {
     this.alertLabel.visible = true;
     var that = this;
     setTimeout(function () { that.alertLabel.visible = false; }, 500);
+  },
+
+  flashLabel: function (label, originalColor, color) {
+    label.fill = color;
+    setTimeout(function () { label.fill = originalColor; }, 500);
+  },
+
+  increaseScore: function () {
+    this.score++;
+    this.scoreLabel.text = '' + this.score;
   }
 }
 
 var GameOver = function () { };
 GameOver.prototype = {
   create: function () {
-    var gameOverText = this.game.add.text(WIDTH / 2, 32, 'GAME OVER', { font: '32px ' + FONT, fill: '#fff' });
+    var gameOverText = this.game.add.text(WIDTH / 2, 32, 'GAME OVER', { font: '32px ' + FONT, fill: WHITE });
     gameOverText.anchor.set(0.5);
 
-    var scoreText = this.game.add.text(WIDTH / 2, HEIGHT / 2, 'BANDITS JAILED: ' + this.game.state.states.Game.score, { font: '32px ' + FONT, fill: '#fff' });
+    var scoreText = this.game.add.text(WIDTH / 2, HEIGHT / 2, 'BANDITS JAILED: ' + this.game.state.states.Game.score, { font: '32px ' + FONT, fill: WHITE });
     scoreText.anchor.set(0.5);
 
     this.game.input.keyboard.onDownCallback = function () {
