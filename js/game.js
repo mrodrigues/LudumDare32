@@ -649,7 +649,8 @@ GameOver.prototype = {
     var scoreText = this.game.add.text(WIDTH / 2, HEIGHT / 2, 'BANDITS JAILED: ' + this.game.state.states.Game.score, { font: '32px ' + FONT, fill: WHITE });
     scoreText.anchor.set(0.5);
 
-    this.game.input.keyboard.onDownCallback = function () {
+    this.game.input.keyboard.onDownCallback = function (ev) {
+      ev.preventDefault();
       this.game.state.start('Game');
       this.game.input.keyboard.onDownCallback = null;
     };
@@ -678,7 +679,8 @@ TitleScreen.prototype = {
     }
 
     var that = this;
-    this.game.input.keyboard.onDownCallback = function () {
+    this.game.input.keyboard.onDownCallback = function (ev) {
+      ev.preventDefault();
       if (that.currentScreen + 1 < that.screens.length) {
         that.screens[that.currentScreen].visible = false;
         that.currentScreen++;
