@@ -5,6 +5,7 @@ var SPAWN_Y_OFFSET = 150;
 
 var FONT = '"Courier New", Courier, monospace';
 var RED = '#f38';
+var GREEN = '#3f3';
 var WHITE = '#fff';
 
 var PLAYING_MUSIC = true;
@@ -146,6 +147,7 @@ Bonus.EqualLength.prototype.check = function (word) {
   if (word.length == this.length) {
     this.game.sound.play('bonus');
     this.game.clearUsedWords();
+    this.game.addToEnergy(10);
   }
 };
 
@@ -191,7 +193,7 @@ var PhaserGame = function () {
   this.currentBonus = null;
   this.bonuses = [];
   this.bonusLabel = null;
-  this.chanceOfBonus = 0.3;
+  this.chanceOfBonus = 0.4;
 
   this.alertLabel = null;
 
@@ -237,6 +239,7 @@ PhaserGame.prototype = {
     this.load.audio('missWord', 'assets/missWord.wav');
     this.load.audio('fireWord', 'assets/fireWord.wav');
     this.load.audio('bonus', 'assets/bonus.wav');
+    this.load.audio('gainEnergy', 'assets/gainEnergy.wav');
     this.load.audio('gameOver', 'assets/gameOver.wav');
     this.load.audio('cantType', 'assets/cantType.wav');
 
@@ -342,7 +345,7 @@ PhaserGame.prototype = {
     energyTextLabel.anchor.x = 0.5;
     this.energyLabel = this.add.text(WIDTH - 50, 40, '', { font: '18px ' + FONT, fill: WHITE });
     this.energyLabel.anchor.x = 0.5;
-    this.addToEnergy(0);
+    this.addToEnergy(0, true);
 
     var scoreTextLabel = this.add.text(WIDTH - 50, 76, 'JAILED', { font: '18px ' + FONT, fill: WHITE });
     scoreTextLabel.anchor.x = 0.5;
@@ -396,6 +399,18 @@ PhaserGame.prototype = {
     this.physics.arcade.overlap(this.player, this.strongEnemies, this.hitPlayer, null, this);
   },
 
+  energyFromWordLength: function (length) {
+    var value = 0;
+    if (length > 10) {
+      value = 3;
+    } else if (length > 7) {
+      value = 2;
+    } else if (length > 4) {
+      value = 1;
+    }
+    return value;
+  },
+
   enterWord: function () {
     if (!this.freeToFire) { return; }
     var word = this.word();
@@ -417,10 +432,11 @@ PhaserGame.prototype = {
       this.wordSpawn.fire(this.player, word);
       this.addUsedWord(word);
       this.currentBonus.check(word);
+      this.addToEnergy(this.energyFromWordLength(word.length));
       returnEnergy = false;
     }
     if (returnEnergy) {
-      this.addToEnergy(this.letters.length);
+      this.addToEnergy(this.letters.length, true);
     }
     this.nextRound();
   },
@@ -444,6 +460,7 @@ PhaserGame.prototype = {
   },
 
   addLetter: function (key) {
+    if (this.game.paused) { return; }
     if (!this.freeToFire) {
       this.game.sound.play('cantType');
       this.showAlert('Wait for the word to stop firing');
@@ -468,21 +485,30 @@ PhaserGame.prototype = {
 
   deleteLetter: function () {
     if (this.letters.length > 0) {
-      this.addToEnergy(1);
+      this.addToEnergy(1, true);
     }
     this.letters.pop();
     this.displayWord();
   },
 
   resetWord: function () {
-    this.addToEnergy(this.letters.length);
+    this.addToEnergy(this.letters.length, true);
     this.letters = [];
     this.displayWord();
   },
 
   displayWord: function () {
     this.currentWordLabel.text = this.word();
-    this.currentWordLengthLabel.text = '' + this.word().length;
+    var length = this.word().length;
+    var text = '' + length;
+    var willGain = this.energyFromWordLength(this.word().length);
+    if (willGain > 0) {
+      this.currentWordLengthLabel.addColor(GREEN, text.length + 1);
+      text += ' => +' + willGain;
+    } else {
+      this.currentWordLengthLabel.clearColors();
+    }
+    this.currentWordLengthLabel.text = text;
   },
 
   word: function () {
@@ -492,7 +518,6 @@ PhaserGame.prototype = {
   hitEnemy: function (letter, enemy) {
     enemy.hit(letter);
     letter.kill();
-    this.addToEnergy(1);
   },
 
   spawnEnemy: function () {
@@ -541,9 +566,13 @@ PhaserGame.prototype = {
     this.usedWordsLabel.text = this.usedWords.join(', ');
   },
 
-  addToEnergy: function (value) {
+  addToEnergy: function (value, omitAlert) {
     this.energy += value;
     this.energyLabel.text = '' + this.energy;
+    if (value > 0 && !omitAlert) {
+      this.game.sound.play('gainEnergy');
+      this.flashLabel(this.energyLabel, WHITE, GREEN);
+    }
   },
 
   increaseDifficulty: function () {
@@ -586,6 +615,7 @@ PhaserGame.prototype = {
   },
 
   increaseScore: function () {
+    this.addToEnergy(1);
     this.score++;
     this.scoreLabel.text = '' + this.score;
   },
